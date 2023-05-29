@@ -6,11 +6,11 @@ const port = process.env.PORT || 5000;
 
 //middlewere
 app.use(cors())
-app.use(express())
+app.use(express.json())
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.USER_NAME}:${process.env.USER_PASS}@cluster0.fs0mclr.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -28,16 +28,58 @@ async function run() {
     await client.connect();
 
 
+    const usersCollection = client.db("bistroDb").collection("users");
     const menuCollection = client.db("bistroDb").collection("menu");
     const reviewCollection = client.db("bistroDb").collection("reviews");
+    const cartCollection = client.db("bistroDb").collection("carts");
 
-    app.get('/menu' , async(req, res) => {
-        const result = await menuCollection.find().toArray()
-        res.send(result)
+
+    //user related api
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
+      res.send(result)
     })
-    app.get('/review' , async(req, res) => {
-        const result = await reviewCollection.find().toArray()
-        res.send(result)
+
+
+
+    //menu related api
+    app.get('/menu', async (req, res) => {
+      const result = await menuCollection.find().toArray()
+      res.send(result)
+    })
+
+    //review related api
+    app.get('/review', async (req, res) => {
+      const result = await reviewCollection.find().toArray()
+      res.send(result)
+    })
+
+    //cart collection apis
+    app.get('/carts', async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        res.send([]);
+      }
+      const query = { email: email };
+      const result = await cartCollection.find(query).toArray();
+      console.log(result);
+      res.send(result)
+    })
+
+    //cart collection
+    app.post('/carts', async (req, res) => {
+      const item = req.body;
+      const result = await cartCollection.insertOne(item);
+      res.send(result)
+    })
+
+    //delete oparation
+    app.delete('/carts/:id', async(req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)};
+      const result = await cartCollection.deleteOne(query)
+      res.send(result)
     })
 
 
@@ -55,9 +97,22 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-    res.send('boss is sittin')
+  res.send('boss is sittin')
 })
 
-app.listen(port , () => {
-    console.log(`Bistro boss is sitting on port ${port}`);
+app.listen(port, () => {
+  console.log(`Bistro boss is sitting on port ${port}`);
 })
+
+
+/**
+ * --------------------------
+ *       NAMING CONVENTION
+ * ---------------------------
+ * users : userCollection
+ * app.get('/users') //all users get
+ * app.get('/users/:id')   //single user get 
+ * app.post('/users)
+ * app.put('users/:id)
+ * app.delete('/users/:id)
+ */
